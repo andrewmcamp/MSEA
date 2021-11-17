@@ -1,0 +1,201 @@
+---
+title: "Review of Omitted Variable Bias and Regression Discontinuity Designs"
+runningheader: "Prepared for MSEA Tutoring Group" # only for pdf output
+subtitle: "Prepared for MSEA Tutoring Group" # only for html output
+author: "Andrew M. Camp"
+date: "Updated `r Sys.Date()`"
+output:
+  tufte::tufte_handout:
+    citation_package: natbib
+    latex_engine: xelatex
+bibliography: references.bib
+---
+
+```{r setup, include=FALSE}
+library(tufte)
+library(tidyverse)
+library(haven)
+library(gtsummary)
+
+# Loading the .dta file from github
+path <- "https://github.com/andrewmcamp/MSER/raw/main/data/florida_offenders.dta"
+dta <- read_dta(path) %>%
+  mutate(reldate = (as.numeric(date)-9731),
+         treated = case_when(reldate >= 0 ~ 1,
+                       reldate < 0 ~ 0),
+         age = as.numeric(age),
+         black = as.factor(black),
+         anyrecid = as.numeric(anyrecid),
+         finrecidany = as.numeric(finrecidany),
+         nonfinrecidany = as.numeric(nonfinrecidany),
+         bin = floor(reldate/60))
+
+# Fixing factor labels
+levels(dta$black) <- c("No", "Yes")
+```
+
+# Omitted Variables Bias (OVB)
+
+> OVB occurs when a regressor $X$ is correlated with some omitted variable that is a determinant of $Y$.
+
+OVB presents a challenge to identification and produces a biased result because it is a violation of the OLS zero conditional mean assumption ($\mathbb{E}[u|x]=0$). Often, OVB is mentioned with the implication that longer regression equations with more regressors are less subject to bias and can somehow be viewed as "more causal." While these notions of "short" and "long" equations are misleading, those are the terms that are commonly used and will be used here. Stealing an example from *Mostly Harmless Econometrics*, assume that individuals' wages can be fully explained by years of schooling, ability, and a stochastic error term.
+
+$$
+W_i =\beta_0+\beta_1(Schooling_i)+\beta_2(Ability_i)+e_i
+$$
+
+Ability is difficult to measure, and so we may be tempted to estimate the returns to schooling using a shorter regression:
+
+$$
+\tilde W_i=\tilde\alpha_0 +\tilde\alpha_1(Schooling_i)+u_i
+$$
+
+Results from this second regression are biases because as schooling increases, so does ability, and we might expect $\mathbb{E}[u_i|Schooling_i]$ increases as schooling increases. The short and long equations shown above can be related as:
+
+$$
+\frac{Cov(W_i,Schooling_i)}{V(Schooling_i)}=\tilde\alpha_1=\beta_1+\beta_2(\delta)
+$$
+
+This is often referred to a the OVB formula[^1] and is sometimes memorized as "*short equals long plus the effect of omitted times the regression of omitted on included.*"
+
+[^1]: See [Andrew Crane-Droesch's class notes](https://are.berkeley.edu/courses/EEP118/spring2014/section/Handout5_student.pdf) for a concise derivation of the OVB formula.
+
+From this, bias in the estimate of $\tilde\alpha_1$ can be algebraically derived as $\textrm{Bias}(\tilde\alpha_1)=\beta_2(\delta)$ where the parameter $\delta$ is obtained through the regression of $Ability_i$ on $Schooling_i$ and is directly related to the correlation of the included and omitted variable. This gives us two insights:
+
+1.  When $\beta_2=0$ or $\tilde\delta=0$, there is no bias.
+2.  Direction of bias can be predicted if we are willing to assume both the sign of correlations between schooling, ability, and wages.
+
+Given prior knowledge, we might assume that schooling and ability are positively correlated and that individuals with more ability earn higher wages. We would then predict the estimate of $\alpha_1$ to be positively biased because both $\beta_2$ and $\delta$ are positive. The table below summarizes this relationship.
+
+|                                       |                    |                    |
+|:-------------------------------------:|:------------------:|:------------------:|
+|                                       | $Corr(S_i, A_i)>0$ | $Corr(S_i, A_i)<0$ |
+| $Ability_i$ has a $+$ effect on $W_i$ |      $+$ Bias      |      $-$ Bias      |
+| $Ability_i$ has a $-$ effect on $W_i$ |      $-$ Bias      |      $+$ Bias      |
+
+: Direction of bias from correlations
+
+# Regression Discontinuity Designs (RDDs)
+
+> RDDs rely upon plausibly random sorting across some threshold value to estimate .
+
+Public and private policies often rely upon strict thresholds for implementation. Drivers over 0.08 BAC receive a DUI, laws take effect on particular dates, and winners of elections may be decided by just a fraction of a percentage point. For events close to the threshold, which side they land on can conceivably be the result of randomness. Additionally, RDDs can be used when some functional relationship between the running variable and outcome is known or can be anticipated from institutional/economic knowledge.
+
+**Terms**
+
+-   **Running Variable** - The running variable is what determines if an individual receives treatment or not
+
+Continuity Assumption
+
+## Treatment Effects
+
+Even in cases where sorting across the threshold is exogenous, the relationship between the running variable and outcome variable can serve to confound identification of causal effects. We'll consider Cody Tuttle's 2019 paper[^2] looking at the effect of a welfare reform on recidivism. In 1996, Florida changed regulations governing food stamp eligibility. If someone was convicted for a crime on or after August 23rd, 1996 they became permanently ineligible to relieve food stamps[^3]. This ineligibility may result in economic hardship after release and increase the probability that an individual re-offends.
+
+[^2]: <https://www.aeaweb.org/articles?id=10.1257/pol.20170490>
+
+[^3]: Food stamps are now referred to as SNAP benefits. I'll probably use the terms interchangeably and apologize if that's confusing.
+
+Here, the running variable (date a crime was committed) and the outcome variable (recidivism rate) have a natural pre-existing relationship. We see recidivism rates near zero towards the right of the graph because individuals who have committed crimes recently will still be incarcerated and thus unable to re-offend. For causal identification, we need to model this relationship in our RDD.
+
+```{r figure1, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+# financial recidivism 
+dta %>%
+  ggplot(aes(x=reldate, y=finrecidany)) +
+    annotate('rect', xmin=-600, xmax=600,
+             ymin=-Inf, ymax=Inf, fill='gray', alpha=0.5) +
+    stat_summary_bin(fun.y='mean', bins=112,
+                   color='black', alpha=0.5,
+                   size=rel(1), geom='point') +
+    geom_vline(xintercept = 0) +
+    xlab("Date Crime Committed") + 
+    ylab("Financial Recidivism Rate") +
+    theme_minimal() + 
+    theme(text = element_text(size = rel(2.5)))
+```
+
+The other thing to remember when thinking about treatment effects during RDD is **who** estimates are valid for. Part of the typical estimation process is to restrict the data used to a range or window of observations surrounding the cutoff. In this example, that window is shaded in gray. Restricting the window is essential to minimize bias from unobservables and imperfect specification of the functional relationship between the running and outcome variables. However, this reduces the *external validity* of our estimate. Treatments effects estimated though RDD are **local average treatment effects (LATEs)**.
+
+## Specification and Estimation via OLS
+
+To estimate treatment effects in this scenario, we can begin with a relatively simple regression equation. Let $Pr(Y_i)$ represent the probability that individual $i$ commits a financially-motivated crime (such as selling drugs), $D_i$ be a dummy variable taking a value of $1$ if individual $i$'s original crime occurred on or after August 23, 1996 and $0$ otherwise, and $T_i=\textrm{CrimeDate}_i - \textrm{August } 23, 1996$ so that negative values indicate the crime was committed prior to the policy change and positive values otherwise.
+
+$$Pr(Y_i)=\beta_0 +\beta_1D_i +\beta_2T_i +e_i$$
+
+```{r naiveReg_fig, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+naiveReg <- lm(finrecidany ~ treated + reldate, data = dta %>%
+       filter(abs(reldate) <= 600))
+
+dta %>%
+  ggplot(aes(x=reldate, y=finrecidany)) +
+    annotate('rect', xmin=-600, xmax=600,
+             ymin=-Inf, ymax=Inf, fill='gray', alpha=0.5) +
+    stat_summary_bin(fun.y='mean', bins=112,
+                   color='black', alpha=0.5,
+                   size=rel(1), geom='point') +
+    geom_vline(xintercept = 0) +
+    geom_segment(aes(x = min(reldate), xend = 0,
+                     y = naiveReg$coefficients[1] +
+                       naiveReg$coefficients[3]*min(reldate),
+                     yend = naiveReg$coefficients[1]),
+                 color = 'blue', linetype='dashed') +
+    geom_segment(aes(x = 0, xend = max(reldate),
+                     y = naiveReg$coefficients[1] +
+                         naiveReg$coefficients[2],
+                     yend = naiveReg$coefficients[1] +
+                            naiveReg$coefficients[2] +
+                       naiveReg$coefficients[3]*max(reldate)),
+                 color = 'green4', linetype='dashed') +
+    geom_segment(aes(x = 0, xend = 0, 
+                     y = naiveReg$coefficients[1],
+                     yend = naiveReg$coefficients[1] +
+                       naiveReg$coefficients[2]),
+                 color='red', size=1) +
+    xlab("Date Crime Committed") + 
+    ylab("Financial Recidivism Rate") +
+    theme_minimal() + 
+    theme(text = element_text(size = rel(2.5)))
+```
+
+A problem with the RDD model specified above is that it structurally imposes the same slope ($\beta_2$) for both the treated and untreated groups. This is fine if we expect treatment to **only** shift outcomes but would fail to capture dynamic treatment effects. We can allow for separate slopes on either side of the cutoff with the following specification.
+
+$$Pr(Y_i)=\beta_0 +\beta_1D_i +\beta_2T_i + \beta_3(D_i \times T_i) + e_i$$
+
+```{r naiveXReg_fig, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+naiveXReg <- lm(finrecidany ~ treated + reldate + treated:reldate, 
+                data = dta %>% filter(abs(reldate) <= 600))
+
+dta %>%
+  ggplot(aes(x=reldate, y=finrecidany)) +
+    annotate('rect', xmin=-600, xmax=600,
+             ymin=-Inf, ymax=Inf, fill='gray', alpha=0.5) +
+    stat_summary_bin(fun.y='mean', bins=112,
+                   color='black', alpha=0.5,
+                   size=rel(1), geom='point') +
+    geom_vline(xintercept = 0) +
+    geom_segment(aes(x = min(reldate), xend = 0,
+                     y = naiveXReg$coefficients[1] +
+                       naiveXReg$coefficients[3]*min(reldate),
+                     yend = naiveXReg$coefficients[1]),
+                 color = 'blue', linetype='dashed') +
+    geom_segment(aes(x = 0, xend = max(reldate),
+                     y = naiveXReg$coefficients[1] +
+                         naiveXReg$coefficients[2],
+                     yend = naiveXReg$coefficients[1] +
+                            naiveXReg$coefficients[2] +
+                       (naiveXReg$coefficients[3]*max(reldate)) +
+                       (naiveXReg$coefficients[4]*max(reldate))),
+                 color = 'green4', linetype='dashed') +
+    geom_segment(aes(x = 0, xend = 0, 
+                     y = naiveXReg$coefficients[1],
+                     yend = naiveXReg$coefficients[1] +
+                       naiveXReg$coefficients[2]),
+                 color='red', size=1) +
+    xlab("Date Crime Committed") + 
+    ylab("Financial Recidivism Rate") +
+    theme_minimal() + 
+    theme(text = element_text(size = rel(2.5)))
+```
+
+That might seem a bit strange -- the slope is clearly going down on points to the right of the cutoff, but the slope is nearly horizontal. What's going on?
+
+Remember -- RDD uses observations **within the bandwidth** to estimate treatment effects and models. Selecting other attributes, such as bandwidth and cutoffs
