@@ -103,3 +103,22 @@
 
 
 
+// ----- (5) Placebo Test Study
+
+	/* 	One way we can check for pre-trends/validity is to change the date of treatment 
+		to some time before true treatment and see if we can still detect an effect.
+		
+	*/
+	
+	* First, I'll load our data again and clean it a bit. 
+	use "https://github.com/andrewmcamp/MSEA/raw/main/data/sourdough.dta", clear // Import from github
+	gen week = week(date)
+	bysort week keyword: egen week_hits = total(hits)
+	keep if dow(date) == 1
+	
+	* Next, I'm going to define the treatment and post variables, but change time of treatment.
+	gen treated = (keyword == 4)
+	gen post = (week >= 8)
+	
+	* Now, we can perform our regression and see if there was a significant effect in week 8
+	reg week_hits treated##post, vce(cluster keyword)
