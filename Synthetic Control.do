@@ -28,6 +28,7 @@ if `install' == 1 {
 	* Save that partially cleaned data file
 	save "synth_raw.dta", replace 
 
+		date("21Aug2919", "DMY")
 		
 // ---------------------------------------------------------------------------------------------------- (2) Estimation
 /*	The first step is to call the synth command. Like a regression, the dependent variable goes first. 
@@ -68,7 +69,7 @@ if `install' == 1 {
 		lpattern(dash) xline(1969, lpattern(longdash))
 		ytitle("GPD per Capita (Thousands)")
 		note("NOTE: GDP is in constant 1986 dollars.", span)
-		legend(pos(6) col(2)));
+		legend(pos(6) col(2))) xlabel(format(%td));
 	graph export "output/GDP_synthetic_real.pdf", replace;
 	#delimit cr
 
