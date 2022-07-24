@@ -6,4 +6,4 @@ Some files are heavily adapted from [Scott Cunningham](https://yalebooks.yale.ed
 ## Tutoring Sign-Up
 1:1 Tutoring or a meeting specifically with your research team is available on Monday and Wednesday from 4-6pm. Appointments are required. 
 
-[Sign-up for a tutoring appointment here.](https://outlook.office365.com/owa/calendar/MSEATutoring@uark.onmicrosoft.com/bookings/) 
+**[Sign-up for a tutoring appointment here.](https://outlook.office365.com/owa/calendar/MSEATutoring@uark.onmicrosoft.com/bookings/)**
