@@ -7,5 +7,8 @@ Some files are heavily adapted from [Scott Cunningham](https://yalebooks.yale.ed
 1:1 Tutoring or a meeting specifically with your research team is available on Monday and Wednesday from 4-6pm. Appointments are required at least 24 hours in advance to make sure I'm on campus and available.
 
 There are two steps to set up a tutoring appointment:
-1. **Reserve a space.** Mullins Library Study Rooms are easy to reserve and usually work very well. [You can reserve a room online here.](https://uark.libcal.com/reserve) We can meet somewhere else on campus if you'd prefer.
+1. **Reserve a space.** Mullins Library Study Rooms are easy to reserve and usually work very well. [You can reserve a room online here.](https://uark.libcal.com/reserve) We can also meet via Zoom or elsewhere on campus if you'd prefer.
 2. **[Sign-up for a tutoring appointment here.](https://outlook.office365.com/owa/calendar/MSEATutoring@uark.onmicrosoft.com/bookings/)**
+
+## Whole Group Sessions
+The other component of tutoring will be weekly whole-group sessions lasting 1-2 hours. To find a time that works best for everyone, please complete this poll by Friday, September 2nd. We can revisit this time if needed.
